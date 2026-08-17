@@ -38,7 +38,7 @@ export const setupCommand = {
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {
     if (!interaction.guildId || !interaction.guild) {
       await interaction.reply({
-        content: "Setup hanya bisa dipakai di dalam server.",
+        content: "Setup can only be used inside a server.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -46,7 +46,7 @@ export const setupCommand = {
 
     if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
       await interaction.reply({
-        content: "Anda butuh permission Administrator untuk menjalankan command ini.",
+        content: "You need the Administrator permission to run this command.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -58,7 +58,7 @@ export const setupCommand = {
 
     if (!hoursParsed.success) {
       await interaction.reply({
-        content: "cycle_duration_hours harus antara 1 dan 168.",
+        content: "cycle_duration_hours must be between 1 and 168.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -92,10 +92,10 @@ export const setupCommand = {
 
       await interaction.reply({
         content:
-          `Setup berhasil.\n` +
+          `Setup complete.\n` +
           `Channel: <#${channel.id}>\n` +
-          `Cycle: ${cycleDurationHours} jam\n` +
-          `(Waifu aktif saat ini tidak berubah. Gunakan \`/admin reset\` untuk mulai ulang).`,
+          `Cycle: ${cycleDurationHours} hours\n` +
+          `(Active waifu is unchanged. Use \`/admin reset\` to start a new cycle).`,
         flags: MessageFlags.Ephemeral,
       });
 
@@ -111,7 +111,7 @@ export const setupCommand = {
     } catch (err) {
       logger.error({ err, guildId: interaction.guildId }, "Setup failed");
       await interaction.reply({
-        content: "Setup gagal karena error internal.",
+        content: "Setup failed due to an internal error.",
         flags: MessageFlags.Ephemeral,
       });
     }

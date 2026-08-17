@@ -96,7 +96,7 @@ async function loadActiveWaifuForGuild(
 export async function handleClaimButton(interaction: ButtonInteraction): Promise<void> {
   if (interaction.customId !== CLAIM_BUTTON_ID) {
     await interaction.reply({
-      content: "Tombol tidak dikenal.",
+      content: "Unknown button.",
       flags: MessageFlags.Ephemeral,
     });
     return;
@@ -104,7 +104,7 @@ export async function handleClaimButton(interaction: ButtonInteraction): Promise
 
   if (!interaction.guildId) {
     await interaction.reply({
-      content: "Hanya bisa dipakai di server.",
+      content: "Can only be used in a server.",
       flags: MessageFlags.Ephemeral,
     });
     return;
@@ -113,7 +113,7 @@ export async function handleClaimButton(interaction: ButtonInteraction): Promise
   const active = await loadActiveWaifuForGuild(interaction.guildId);
   if (!active) {
     await interaction.reply({
-      content: "Waifu aktif tidak ditemukan atau sudah berakhir.",
+      content: "Active waifu not found or has ended.",
       flags: MessageFlags.Ephemeral,
     });
     return;
@@ -123,7 +123,7 @@ export async function handleClaimButton(interaction: ButtonInteraction): Promise
 
   if (!result) {
     await interaction.reply({
-      content: "Karakter sudah diklaim orang lain lebih dulu. Coba lagi besok!",
+      content: "This character was claimed by someone else first. Try again tomorrow!",
       flags: MessageFlags.Ephemeral,
     });
     return;
@@ -151,11 +151,11 @@ export async function handleClaimButton(interaction: ButtonInteraction): Promise
   }
 
   const collectNote = result.collectedToCollection
-    ? "Karakter ditambahkan ke koleksimu."
-    : "Kamu sudah punya karakter ini. Klaim tetap dicatat tapi koleksimu tidak bertambah.";
+    ? "Character added to your collection."
+    : "You already own this character. The claim is recorded but your collection does not grow.";
 
   await interaction.reply({
-    content: `<@${interaction.user.id}> memenangkan **${active.name}**! ${collectNote}`,
+    content: `<@${interaction.user.id}> won **${active.name}**! ${collectNote}`,
     flags: MessageFlags.Ephemeral,
   });
 }
@@ -199,7 +199,7 @@ async function rebuildPagination(
 
     const embed = buildPaginatedEmbed({
       title: `💖 Harem`,
-      description: `Total koleksi: **${rows.length}** karakter`,
+      description: `Collection total: **${rows.length}** characters`,
       rows: pageSlice(rows, page).map((row) => ({
         label: row.name,
         value: `${row.rarity} • ${row.sourceUrl ? `[AniList](${row.sourceUrl})` : "Unknown"}`,
@@ -231,10 +231,10 @@ async function rebuildPagination(
 
     const embed = buildPaginatedEmbed({
       title: "🏆 Leaderboard",
-      description: "Top collectors berdasarkan jumlah karakter.",
+      description: "Top collectors by character count.",
       rows: pageSlice(rows, page).map((row, idx) => ({
         label: `#${page * 10 - 10 + idx + 1} <@${row.userId}>`,
-        value: `${row.count} karakter`,
+        value: `${row.count} characters`,
         inline: false,
       })),
       page,
@@ -264,8 +264,8 @@ async function rebuildPagination(
       .orderBy(desc(claimHistory.claimedAt));
 
     const embed = buildPaginatedEmbed({
-      title: "📜 History Klaim",
-      description: "10 klaim terakhir di server ini.",
+title: "📜 Claim History",
+        description: "Last 10 claims in this server.",
       rows: pageSlice(rows, page).map((row) => ({
         label: row.characterName,
         value: `<@${row.userId}> • ${row.rarity} • <t:${Math.floor(row.claimedAt.getTime() / 1000)}:R>`,
@@ -309,7 +309,7 @@ async function handlePaginationButton(interaction: ButtonInteraction): Promise<v
   const parsed = parsePaginationCustomIdV2(interaction.customId);
   if (!parsed) {
     await interaction.reply({
-      content: "Tombol pagination tidak valid.",
+      content: "Invalid pagination button.",
       flags: MessageFlags.Ephemeral,
     });
     return;
@@ -317,7 +317,7 @@ async function handlePaginationButton(interaction: ButtonInteraction): Promise<v
 
   if (interaction.user.id !== parsed.authorId) {
     await interaction.reply({
-      content: "Tombol ini bukan untuk Anda.",
+      content: "This button is not for you.",
       flags: MessageFlags.Ephemeral,
     });
     return;
@@ -325,7 +325,7 @@ async function handlePaginationButton(interaction: ButtonInteraction): Promise<v
 
   if (!interaction.guildId) {
     await interaction.reply({
-      content: "Hanya untuk server.",
+      content: "Server only.",
       flags: MessageFlags.Ephemeral,
     });
     return;
@@ -339,7 +339,7 @@ async function handlePaginationButton(interaction: ButtonInteraction): Promise<v
   );
   if (!target) {
     await interaction.reply({
-      content: "Data tidak ditemukan.",
+      content: "Data not found.",
       flags: MessageFlags.Ephemeral,
     });
     return;
@@ -363,8 +363,8 @@ export const interactionRouter: BotEvent<"interactionCreate"> = {
         await handlePaginationButton(interaction);
         return;
       }
-      await interaction.reply({
-        content: "Tombol tidak dikenal.",
+await interaction.reply({
+        content: "Unknown button.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -375,7 +375,7 @@ export const interactionRouter: BotEvent<"interactionCreate"> = {
       const cmd = commands.get(interaction.commandName);
       if (!cmd) {
         await interaction.reply({
-          content: "Command tidak ditemukan.",
+          content: "Command not found.",
           flags: MessageFlags.Ephemeral,
         });
         return;

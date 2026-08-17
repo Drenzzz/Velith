@@ -80,12 +80,12 @@ async function performAdminSpawn(
   action: "reroll" | "spawn" | "reset",
 ): Promise<void> {
   if (!interaction.guildId) {
-    await interaction.reply({ content: "Hanya untuk server.", flags: MessageFlags.Ephemeral });
+    await interaction.reply({ content: "Server only.", flags: MessageFlags.Ephemeral });
     return;
   }
   if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
     await interaction.reply({
-      content: "Butuh permission Administrator.",
+      content: "Administrator permission required.",
       flags: MessageFlags.Ephemeral,
     });
     return;
@@ -94,7 +94,7 @@ async function performAdminSpawn(
   const ctx = await getActiveWaifuForGuild(interaction.guildId);
   if (!ctx?.internalGuildId) {
     await interaction.reply({
-      content: "Server belum di-setup. Jalankan /setup terlebih dahulu.",
+      content: "Server has not been set up yet. Run /setup first.",
       flags: MessageFlags.Ephemeral,
     });
     return;
@@ -109,7 +109,7 @@ async function performAdminSpawn(
 
   if (!config?.waifuChannelId) {
     await interaction.reply({
-      content: "Channel waifu belum di-set. Jalankan /setup.",
+      content: "Waifu channel has not been set. Run /setup.",
       flags: MessageFlags.Ephemeral,
     });
     return;
@@ -122,7 +122,7 @@ async function performAdminSpawn(
   const choice = await pickRandomForGuild(ctx.internalGuildId);
   if (!choice) {
     await interaction.reply({
-      content: "Pool karakter kosong.",
+      content: "Character pool is empty.",
       flags: MessageFlags.Ephemeral,
     });
     return;
@@ -162,7 +162,7 @@ async function performAdminSpawn(
   );
 
   await interaction.reply({
-    content: `Admin action **${action}** selesai. Karakter baru: **${choice.name}** (${choice.rarity}).`,
+    content: `Admin action **${action}** done. New character: **${choice.name}** (${choice.rarity}).`,
     flags: MessageFlags.Ephemeral,
   });
 }
@@ -172,13 +172,13 @@ export const adminRerollCommand = {
     .setName("admin")
     .setDescription("Admin commands")
     .addSubcommand((sub) =>
-      sub.setName("reroll").setDescription("Ganti karakter aktif sekarang dengan karakter baru."),
+      sub.setName("reroll").setDescription("Replace the active character with a new one."),
     )
     .addSubcommand((sub) =>
-      sub.setName("spawn").setDescription("Paksa spawn karakter baru (mark expired + spawn)."),
+      sub.setName("spawn").setDescription("Force spawn a new character (mark expired and spawn)."),
     )
     .addSubcommand((sub) =>
-      sub.setName("reset").setDescription("Reset cycle manual: mark expired + spawn karakter baru."),
+      sub.setName("reset").setDescription("Reset the cycle manually: mark expired and spawn a new character."),
     ),
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {
     if (!interaction.client) {
@@ -189,7 +189,7 @@ export const adminRerollCommand = {
     const subcommand = interaction.options.getSubcommand();
     if (subcommand !== "reroll" && subcommand !== "spawn" && subcommand !== "reset") {
       await interaction.reply({
-        content: `Subcommand tidak dikenal: ${subcommand}`,
+        content: `Unknown subcommand: ${subcommand}`,
         flags: MessageFlags.Ephemeral,
       });
       return;

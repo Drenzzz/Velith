@@ -64,10 +64,10 @@ async function loadHaremRows(
 export const haremCommand = {
   data: new SlashCommandBuilder()
     .setName("harem")
-    .setDescription("Tampilkan koleksi karakter Anda (paginated)."),
+    .setDescription("Show your character collection (paginated)."),
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {
     if (!interaction.guildId) {
-      await interaction.reply({ content: "Hanya untuk server.", flags: MessageFlags.Ephemeral });
+      await interaction.reply({ content: "Server only.", flags: MessageFlags.Ephemeral });
       return;
     }
 
@@ -79,7 +79,7 @@ export const haremCommand = {
 
       const embed = buildPaginatedEmbed({
         title: `💖 Harem ${interaction.user.username}`,
-        description: `Total koleksi: **${total}** karakter`,
+        description: `Collection total: **${total}** characters`,
         rows: pageSlice(rows, page).map((row) => ({
           label: `${row.name}`,
           value: `${row.rarity} • ${row.sourceUrl ? `[AniList](${row.sourceUrl})` : "Unknown"} • <t:${Math.floor(row.claimedAt.getTime() / 1000)}:R>`,
@@ -109,7 +109,7 @@ export const haremCommand = {
       });
     } catch (err) {
       logger.error({ err, guildId: interaction.guildId, userId: interaction.user.id }, "/harem failed");
-      await interaction.reply({ content: "Gagal memuat harem.", flags: MessageFlags.Ephemeral });
+      await interaction.reply({ content: "Failed to load your harem.", flags: MessageFlags.Ephemeral });
     }
   },
 };

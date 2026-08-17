@@ -53,10 +53,10 @@ async function loadHistory(discordGuildId: string): Promise<HistoryRow[]> {
 export const historyCommand = {
   data: new SlashCommandBuilder()
     .setName("history")
-    .setDescription("Riwayat klaim daily waifu (paginated)."),
+    .setDescription("Daily waifu claim history (paginated)."),
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {
     if (!interaction.guildId) {
-      await interaction.reply({ content: "Hanya untuk server.", flags: MessageFlags.Ephemeral });
+      await interaction.reply({ content: "Server only.", flags: MessageFlags.Ephemeral });
       return;
     }
 
@@ -66,8 +66,8 @@ export const historyCommand = {
       const page = 1;
 
       const embed = buildPaginatedEmbed({
-        title: "📜 History Klaim",
-        description: "10 klaim terakhir di server ini.",
+        title: "📜 Claim History",
+        description: "Last 10 claims in this server.",
         rows: pageSlice(rows, page).map((row) => ({
           label: `${row.characterName}`,
           value: `<@${row.userId}> • ${row.rarity} • <t:${Math.floor(row.claimedAt.getTime() / 1000)}:R>`,
@@ -90,7 +90,7 @@ export const historyCommand = {
       });
     } catch (err) {
       logger.error({ err, guildId: interaction.guildId }, "/history failed");
-      await interaction.reply({ content: "Gagal memuat history.", flags: MessageFlags.Ephemeral });
+      await interaction.reply({ content: "Failed to load history.", flags: MessageFlags.Ephemeral });
     }
   },
 };

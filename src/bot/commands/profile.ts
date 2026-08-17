@@ -34,10 +34,10 @@ async function getInternalGuildId(discordGuildId: string): Promise<string | null
 export const profileCommand = {
   data: new SlashCommandBuilder()
     .setName("profile")
-    .setDescription("Tampilkan statistik koleksi Anda."),
+    .setDescription("Show your collection statistics."),
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {
     if (!interaction.guildId) {
-      await interaction.reply({ content: "Hanya untuk server.", flags: MessageFlags.Ephemeral });
+      await interaction.reply({ content: "Server only.", flags: MessageFlags.Ephemeral });
       return;
     }
 
@@ -45,7 +45,7 @@ export const profileCommand = {
       const internalGuildId = await getInternalGuildId(interaction.guildId);
       if (!internalGuildId) {
         await interaction.reply({
-          content: "Server belum di-setup. Jalankan /setup terlebih dahulu.",
+          content: "Server has not been set up yet. Run /setup first.",
           flags: MessageFlags.Ephemeral,
         });
         return;
@@ -98,16 +98,16 @@ export const profileCommand = {
         .setTitle(`📊 Profile ${interaction.user.username}`)
         .setColor(0x3498db)
         .addFields(
-          { name: "Koleksi", value: `${total}`, inline: true },
-          { name: "Total klaim", value: `${totalClaims}`, inline: true },
-          { name: "Rarity tertinggi", value: topRarity, inline: true },
-          { name: "Breakdown", value: breakdown || "(kosong)", inline: false },
+          { name: "Collection", value: `${total}`, inline: true },
+          { name: "Total claims", value: `${totalClaims}`, inline: true },
+          { name: "Top rarity", value: topRarity, inline: true },
+          { name: "Breakdown", value: breakdown || "(empty)", inline: false },
         );
 
       await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
     } catch (err) {
       logger.error({ err, guildId: interaction.guildId, userId: interaction.user.id }, "/profile failed");
-      await interaction.reply({ content: "Gagal memuat profile.", flags: MessageFlags.Ephemeral });
+      await interaction.reply({ content: "Failed to load profile.", flags: MessageFlags.Ephemeral });
     }
   },
 };

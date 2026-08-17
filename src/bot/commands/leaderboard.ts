@@ -48,10 +48,10 @@ async function loadLeaderboard(discordGuildId: string): Promise<LeaderRow[]> {
 export const leaderboardCommand = {
   data: new SlashCommandBuilder()
     .setName("leaderboard")
-    .setDescription("Ranking user berdasarkan jumlah karakter (paginated)."),
+    .setDescription("Rank users by character count (paginated)."),
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {
     if (!interaction.guildId) {
-      await interaction.reply({ content: "Hanya untuk server.", flags: MessageFlags.Ephemeral });
+      await interaction.reply({ content: "Server only.", flags: MessageFlags.Ephemeral });
       return;
     }
 
@@ -62,10 +62,10 @@ export const leaderboardCommand = {
 
       const embed = buildPaginatedEmbed({
         title: "🏆 Leaderboard",
-        description: "Top collectors berdasarkan jumlah karakter.",
+        description: "Top collectors by character count.",
         rows: pageSlice(rows, page).map((row, idx) => ({
           label: `#${page * 10 - 10 + idx + 1} <@${row.userId}>`,
-          value: `${row.count} karakter`,
+          value: `${row.count} characters`,
           inline: false,
         })),
         page,
@@ -85,7 +85,7 @@ export const leaderboardCommand = {
       });
     } catch (err) {
       logger.error({ err, guildId: interaction.guildId }, "/leaderboard failed");
-      await interaction.reply({ content: "Gagal memuat leaderboard.", flags: MessageFlags.Ephemeral });
+      await interaction.reply({ content: "Failed to load leaderboard.", flags: MessageFlags.Ephemeral });
     }
   },
 };

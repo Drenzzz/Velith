@@ -66,11 +66,11 @@ async function loadActiveForGuild(discordGuildId: string): Promise<ActiveRow | n
 export const waifuCommand = {
   data: new SlashCommandBuilder()
     .setName("waifu")
-    .setDescription("Tampilkan Waifu of the Day yang sedang aktif."),
+    .setDescription("Show the active Waifu of the Day."),
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {
     if (!interaction.guildId) {
       await interaction.reply({
-        content: "Command ini hanya bisa dipakai di dalam server.",
+        content: "This command can only be used inside a server.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -81,7 +81,7 @@ export const waifuCommand = {
 
       if (!active) {
         await interaction.reply({
-          content: "Belum ada waifu aktif. Tunggu scheduler tick berikutnya (maks 1 menit).",
+          content: "No active waifu yet. The scheduler tick will spawn one within 1 minute.",
           flags: MessageFlags.Ephemeral,
         });
         return;
@@ -89,7 +89,7 @@ export const waifuCommand = {
 
       if (active.expiresAt.getTime() <= Date.now()) {
         await interaction.reply({
-          content: "Waifu aktif sudah kedaluwarsa. Tunggu scheduler tick berikutnya.",
+          content: "Active waifu has expired. Waiting for the next scheduler tick.",
           flags: MessageFlags.Ephemeral,
         });
         return;
@@ -111,7 +111,7 @@ export const waifuCommand = {
     } catch (err) {
       logger.error({ err, guildId: interaction.guildId }, "/waifu failed");
       await interaction.reply({
-        content: "Gagal memuat waifu aktif.",
+        content: "Failed to load the active waifu.",
         flags: MessageFlags.Ephemeral,
       });
     }

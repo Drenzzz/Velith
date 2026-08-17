@@ -41,10 +41,10 @@ export function buildPaginatedEmbed(opts: PaginationOptions): EmbedBuilder {
     .setTitle(opts.title)
     .setColor(opts.color ?? 0x9b59b6)
     .setDescription(opts.description ?? null)
-    .setFooter({ text: `Halaman ${safePage} / ${total} • ${opts.totalRows} total` });
+    .setFooter({ text: `Page ${safePage} / ${total} • ${opts.totalRows} total` });
 
   if (opts.rows.length === 0) {
-    embed.addFields({ name: "(kosong)", value: "Tidak ada data", inline: false });
+    embed.addFields({ name: "(empty)", value: "No entries", inline: false });
   } else {
     for (const row of opts.rows) {
       embed.addFields({ name: row.label, value: row.value, inline: row.inline ?? false });
@@ -85,7 +85,7 @@ export function buildPaginationRow(
 if (import.meta.main) {
   const sampleRows = Array.from({ length: 25 }, (_, i) => ({
     label: `Item ${i + 1}`,
-    value: `Deskripsi untuk item ${i + 1}`,
+    value: `Description for item ${i + 1}`,
     inline: false,
   }));
 
