@@ -2,6 +2,9 @@ import {
   InteractionType,
   MessageFlags,
   type ButtonInteraction,
+  type EmbedBuilder,
+  type ActionRowBuilder,
+  type ButtonBuilder,
 } from "discord.js";
 import { and, eq } from "drizzle-orm";
 import type { BotEvent } from "../types/discord.ts";
@@ -11,12 +14,21 @@ import {
   dailyWaifus,
   characters,
   characterImages,
+  collections,
+  claimHistory,
 } from "../../db/schema/index.ts";
 import { attemptClaim } from "../../claim/service.ts";
 import { editMessageToClaimed } from "../../waifu/edit.ts";
+import {
+  buildPaginatedEmbed,
+  buildPaginationRow,
+  pageSlice,
+} from "../../commands/pagination.ts";
 import { logger } from "../../logger/index.ts";
 
 const CLAIM_BUTTON_ID = "waifu:claim";
+const PAGINATION_PREFIX = "pagination";
+const PAGINATION_SCOPES = new Set(["harem", "leaderboard", "history"]);
 
 interface ActiveWaifuWithDetails {
   dailyWaifuId: string;
@@ -148,11 +160,229 @@ export async function handleClaimButton(interaction: ButtonInteraction): Promise
   });
 }
 
+interface PaginationTarget {
+  embed: EmbedBuilder;
+  row: ActionRowBuilder<ButtonBuilder> | null;
+}
+
+async function rebuildPagination(
+  scope: string,
+  discordGuildId: string,
+  userId: string,
+  page: number,
+): Promise<PaginationTarget | null> {
+  const guildRows = await db
+    .select({ id: guildsTable.id })
+    .from(guildsTable)
+    .where(eq(guildsTable.discordGuildId, discordGuildId))
+    .limit(1);
+  const internalGuildId = guildRows[0]?.id;
+  if (!internalGuildId) return null;
+
+  if (scope === "harem") {
+    const rows = await db
+      .select({
+        name: characters.name,
+        rarity: characters.rarity,
+        sourceUrl: characters.sourceUrl,
+        claimedAt: collections.claimedAt,
+      })
+      .from(collections)
+      .innerJoin(characters, eq(collections.characterId, characters.id))
+      .where(
+        and(
+          eq(collections.guildId, internalGuildId),
+          eq(collections.userId, userId),
+        ),
+      )
+      .orderBy(collections.claimedAt);
+
+    const embed = buildPaginatedEmbed({
+      title: `💖 Harem`,
+      description: `Total koleksi: **${rows.length}** karakter`,
+      rows: pageSlice(rows, page).map((row) => ({
+        label: row.name,
+        value: `${row.rarity} • ${row.sourceUrl ? `[AniList](${row.sourceUrl})` : "Unknown"}`,
+        inline: false,
+      })),
+      page,
+      scope: "harem",
+      authorId: userId,
+      totalRows: rows.length,
+    });
+
+    return {
+      embed,
+      row: rows.length === 0 ? null : buildPaginationRow("harem", userId, page, rows.length),
+    };
+  }
+
+  if (scope === "leaderboard") {
+    const { sql, desc } = await import("drizzle-orm");
+    const rows = await db
+      .select({
+        userId: collections.userId,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(collections)
+      .where(eq(collections.guildId, internalGuildId))
+      .groupBy(collections.userId)
+      .orderBy(desc(sql`count(*)`));
+
+    const embed = buildPaginatedEmbed({
+      title: "🏆 Leaderboard",
+      description: "Top collectors berdasarkan jumlah karakter.",
+      rows: pageSlice(rows, page).map((row, idx) => ({
+        label: `#${page * 10 - 10 + idx + 1} <@${row.userId}>`,
+        value: `${row.count} karakter`,
+        inline: false,
+      })),
+      page,
+      scope: "leaderboard",
+      authorId: userId,
+      totalRows: rows.length,
+    });
+
+    return {
+      embed,
+      row: rows.length === 0 ? null : buildPaginationRow("leaderboard", userId, page, rows.length),
+    };
+  }
+
+  if (scope === "history") {
+    const { desc } = await import("drizzle-orm");
+    const rows = await db
+      .select({
+        userId: claimHistory.userId,
+        characterName: characters.name,
+        rarity: characters.rarity,
+        claimedAt: claimHistory.claimedAt,
+      })
+      .from(claimHistory)
+      .innerJoin(characters, eq(claimHistory.characterId, characters.id))
+      .where(eq(claimHistory.guildId, internalGuildId))
+      .orderBy(desc(claimHistory.claimedAt));
+
+    const embed = buildPaginatedEmbed({
+      title: "📜 History Klaim",
+      description: "10 klaim terakhir di server ini.",
+      rows: pageSlice(rows, page).map((row) => ({
+        label: row.characterName,
+        value: `<@${row.userId}> • ${row.rarity} • <t:${Math.floor(row.claimedAt.getTime() / 1000)}:R>`,
+        inline: false,
+      })),
+      page,
+      scope: "history",
+      authorId: userId,
+      totalRows: rows.length,
+    });
+
+    return {
+      embed,
+      row: rows.length === 0 ? null : buildPaginationRow("history", userId, page, rows.length),
+    };
+  }
+
+  return null;
+}
+
+function parsePaginationCustomId(customId: string): {
+  scope: string;
+  authorId: string;
+  page: number;
+} | null {
+  const parts = customId.split(":");
+  if (parts.length !== 4) return null;
+  const [prefix, direction, authorId, pageStr] = parts;
+  if (prefix !== PAGINATION_PREFIX) return null;
+  if (direction !== "prev" && direction !== "next") return null;
+  if (!PAGINATION_SCOPES.has(parts[0] === "" ? "" : "x")) {
+    // scope is not parts[0] — let's restructure
+  }
+  return null;
+}
+
+function parsePaginationCustomIdV2(customId: string): {
+  scope: string;
+  authorId: string;
+  page: number;
+  direction: "prev" | "next";
+} | null {
+  const parts = customId.split(":");
+  if (parts.length !== 4) return null;
+  const scope = parts[0] ?? "";
+  const direction = parts[1] ?? "";
+  const authorId = parts[2] ?? "";
+  const pageStr = parts[3] ?? "";
+  if (direction !== "prev" && direction !== "next") return null;
+  if (!PAGINATION_SCOPES.has(scope)) return null;
+  const page = parseInt(pageStr, 10);
+  if (!Number.isFinite(page) || page < 1) return null;
+  return { scope, authorId, page, direction };
+}
+
+async function handlePaginationButton(interaction: ButtonInteraction): Promise<void> {
+  const parsed = parsePaginationCustomIdV2(interaction.customId);
+  if (!parsed) {
+    await interaction.reply({
+      content: "Tombol pagination tidak valid.",
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
+  if (interaction.user.id !== parsed.authorId) {
+    await interaction.reply({
+      content: "Tombol ini bukan untuk Anda.",
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
+  if (!interaction.guildId) {
+    await interaction.reply({
+      content: "Hanya untuk server.",
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
+  const target = await rebuildPagination(
+    parsed.scope,
+    interaction.guildId,
+    parsed.authorId,
+    parsed.page,
+  );
+  if (!target) {
+    await interaction.reply({
+      content: "Data tidak ditemukan.",
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
+  await interaction.update({
+    embeds: [target.embed],
+    components: target.row ? [target.row] : [],
+  });
+}
+
 export const interactionRouter: BotEvent<"interactionCreate"> = {
   name: "interactionCreate",
   async execute(interaction) {
     if (interaction.type === InteractionType.MessageComponent && interaction.isButton()) {
-      await handleClaimButton(interaction);
+      if (interaction.customId === CLAIM_BUTTON_ID) {
+        await handleClaimButton(interaction);
+        return;
+      }
+      if (PAGINATION_SCOPES.has(interaction.customId.split(":")[0] ?? "")) {
+        await handlePaginationButton(interaction);
+        return;
+      }
+      await interaction.reply({
+        content: "Tombol tidak dikenal.",
+        flags: MessageFlags.Ephemeral,
+      });
       return;
     }
 
