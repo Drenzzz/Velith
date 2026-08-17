@@ -176,6 +176,9 @@ export const adminRerollCommand = {
     )
     .addSubcommand((sub) =>
       sub.setName("spawn").setDescription("Paksa spawn karakter baru (mark expired + spawn)."),
+    )
+    .addSubcommand((sub) =>
+      sub.setName("reset").setDescription("Reset cycle manual: mark expired + spawn karakter baru."),
     ),
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {
     if (!interaction.client) {
@@ -184,7 +187,7 @@ export const adminRerollCommand = {
     }
 
     const subcommand = interaction.options.getSubcommand();
-    if (subcommand !== "reroll" && subcommand !== "spawn") {
+    if (subcommand !== "reroll" && subcommand !== "spawn" && subcommand !== "reset") {
       await interaction.reply({
         content: `Subcommand tidak dikenal: ${subcommand}`,
         flags: MessageFlags.Ephemeral,
