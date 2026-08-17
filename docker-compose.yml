@@ -1,0 +1,39 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-waifu_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-discord_waifu}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-waifu_user} -d ${POSTGRES_DB:-discord_waifu}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5432:5432"
+
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DISCORD_TOKEN: ${DISCORD_TOKEN}
+      DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-waifu_user}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-discord_waifu}
+      ANILIST_API_URL: ${ANILIST_API_URL:-https://graphql.anilist.co}
+      JIKAN_API_URL: ${JIKAN_API_URL:-https://api.jikan.moe/v4}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      APP_ENV: ${APP_ENV:-production}
+    command: ["bun", "run", "src/index.ts"]
+
+volumes:
+  pg_data:
+    driver: local
