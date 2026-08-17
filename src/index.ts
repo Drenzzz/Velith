@@ -1,6 +1,7 @@
 import { startBot } from "./bot/client.ts";
-import { startScheduler } from "./scheduler/loop.ts";
+import { startScheduler, type SchedulerHandle } from "./scheduler/loop.ts";
 import { logger } from "./logger/index.ts";
+import { closeDb } from "./db/client.ts";
 
 logger.info(
   {
@@ -11,18 +12,44 @@ logger.info(
 );
 
 const client = await startBot();
-const scheduler = startScheduler(60_000, client);
+const scheduler: SchedulerHandle = startScheduler(60_000, client);
+
+let shuttingDown = false;
+
+async function shutdown(signal: string): Promise<void> {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  logger.info({ signal }, "Shutdown initiated");
+
+  try {
+    scheduler.stop();
+    logger.info("Scheduler stopped");
+  } catch (err) {
+    logger.error({ err }, "Error stopping scheduler");
+  }
+
+  try {
+    client.destroy();
+    logger.info("Discord client disconnected");
+  } catch (err) {
+    logger.error({ err }, "Error destroying Discord client");
+  }
+
+  try {
+    await closeDb();
+    logger.info("Database pool closed");
+  } catch (err) {
+    logger.error({ err }, "Error closing database pool");
+  }
+
+  logger.info("Shutdown complete");
+  process.exit(0);
+}
 
 process.on("SIGINT", () => {
-  logger.info("SIGINT received, shutting down");
-  scheduler.stop();
-  client.destroy();
-  process.exit(0);
+  void shutdown("SIGINT");
 });
 
 process.on("SIGTERM", () => {
-  logger.info("SIGTERM received, shutting down");
-  scheduler.stop();
-  client.destroy();
-  process.exit(0);
+  void shutdown("SIGTERM");
 });
