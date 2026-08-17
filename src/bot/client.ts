@@ -3,13 +3,13 @@ import { env } from "../config/env.ts";
 import { logger } from "../logger/index.ts";
 import { readyEvent } from "./events/ready.ts";
 import { errorEvent } from "./events/error.ts";
-import { interactionCreateEvent } from "./events/interactionCreate.ts";
+import { interactionRouter } from "./interactions/index.ts";
 import type { BotEvent } from "./types/discord.ts";
 
 export const events: BotEvent[] = [
   readyEvent,
   errorEvent,
-  interactionCreateEvent,
+  interactionRouter,
 ];
 
 export function createClient(): Client {
