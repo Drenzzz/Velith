@@ -6,6 +6,7 @@ import { profileCommand } from "./profile.ts";
 import { leaderboardCommand } from "./leaderboard.ts";
 import { historyCommand } from "./history.ts";
 import { adminRerollCommand } from "./admin.ts";
+import { inviteCommand } from "./invite.ts";
 
 export interface CommandModule {
   data: { name: string; toJSON: () => unknown };
@@ -20,6 +21,7 @@ commands.set(profileCommand.data.name, profileCommand);
 commands.set(leaderboardCommand.data.name, leaderboardCommand);
 commands.set(historyCommand.data.name, historyCommand);
 commands.set(adminRerollCommand.data.name, adminRerollCommand);
+commands.set(inviteCommand.data.name, inviteCommand);
 
 export const commandData = [
   waifuCommand.data.toJSON(),
@@ -29,4 +31,5 @@ export const commandData = [
   leaderboardCommand.data.toJSON(),
   historyCommand.data.toJSON(),
   adminRerollCommand.data.toJSON(),
+  inviteCommand.data.toJSON(),
 ];

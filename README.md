@@ -26,14 +26,31 @@ bun run db:migrate
 # 4. Import character pool (one-time, fetches from AniList)
 bun run import:characters --pages=3
 
-# 5. Deploy slash commands to your guild
-TEST_GUILD_ID=<your_guild_snowflake> bun run deploy:commands
+# 5. Deploy slash commands to your test guild
+COMMAND_SCOPE=guild TEST_GUILD_ID=<your_guild_snowflake> bun run deploy:commands
 
 # 6. Run the bot
 bun run start
 ```
 
 Run `/setup` in your Discord server to register the waifu channel and cycle duration.
+
+## Public Installation
+
+Velith supports multiple Discord servers. Each server gets its own waifu channel, cycle, collection, and claim history.
+
+One-time setup in the Discord Developer Portal:
+
+1. Enable **Public Bot** for the application.
+2. Keep `DISCORD_CLIENT_ID` and `DISCORD_TOKEN` in `.env`.
+
+Deploy commands globally for public use:
+
+```bash
+COMMAND_SCOPE=global bun run deploy:commands
+```
+
+Global command updates can take time to appear. Run `/invite` in a server where Velith is already installed, then share the generated link. A person installing Velith must have **Manage Server** or **Administrator** permission in the target server. After installation, run `/setup` in that server.
 
 ## Architecture
 
@@ -72,6 +89,7 @@ No HTTP server. No web dashboard. All interaction happens through Discord.
 | `/profile` | Show your stats | All members |
 | `/leaderboard` | Show top collectors, paginated | All members |
 | `/history` | Show recent claims, paginated | All members |
+| `/invite` | Generate a link to add Velith to another server | All members |
 | `/setup` | Configure waifu channel and cycle duration | Administrator |
 | `/admin reroll` | Replace the active waifu | Administrator |
 | `/admin spawn` | Force spawn a new waifu | Administrator |
@@ -87,12 +105,13 @@ bun run db:generate      # Generate migration from schema changes
 bun run db:migrate       # Apply pending migrations
 bun run db:studio        # Open Drizzle Studio
 bun run import:characters --pages=3  # Fetch characters from AniList
-bun run deploy:commands  # Push slash commands to guild
+COMMAND_SCOPE=guild TEST_GUILD_ID=<guild_id> bun run deploy:commands  # Development
+COMMAND_SCOPE=global bun run deploy:commands                         # Public deployment
 ```
 
 Scripts:
 
-- `scripts/deploy-commands.ts` — REST push guild-scoped commands
+- `scripts/deploy-commands.ts` — REST push guild- or global-scoped commands
 - `scripts/import-characters.ts` — Character pool importer
 - `scripts/cleanup-gender.ts` — One-time cleanup of non-female characters
 - `scripts/stress-claim.ts` — Concurrent claim race-safety test
