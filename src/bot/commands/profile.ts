@@ -101,7 +101,7 @@ export const profileCommand = {
           { name: "Koleksi", value: `${total}`, inline: true },
           { name: "Total klaim", value: `${totalClaims}`, inline: true },
           { name: "Rarity tertinggi", value: topRarity, inline: true },
-          { name: "Breakdown", value: breakdown || "—", inline: false },
+          { name: "Breakdown", value: breakdown || "(kosong)", inline: false },
         );
 
       await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });

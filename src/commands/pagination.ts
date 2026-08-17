@@ -44,7 +44,7 @@ export function buildPaginatedEmbed(opts: PaginationOptions): EmbedBuilder {
     .setFooter({ text: `Halaman ${safePage} / ${total} • ${opts.totalRows} total` });
 
   if (opts.rows.length === 0) {
-    embed.addFields({ name: "—", value: "Kosong", inline: false });
+    embed.addFields({ name: "(kosong)", value: "Tidak ada data", inline: false });
   } else {
     for (const row of opts.rows) {
       embed.addFields({ name: row.label, value: row.value, inline: row.inline ?? false });
@@ -69,13 +69,13 @@ export function buildPaginationRow(
 
   const prev = new ButtonBuilder()
     .setCustomId(prevId)
-    .setLabel("◀ Prev")
+    .setLabel("Prev")
     .setStyle(ButtonStyle.Secondary)
     .setDisabled(safePage <= 1);
 
   const next = new ButtonBuilder()
     .setCustomId(nextId)
-    .setLabel("Next ▶")
+    .setLabel("Next")
     .setStyle(ButtonStyle.Secondary)
     .setDisabled(safePage >= total);
 

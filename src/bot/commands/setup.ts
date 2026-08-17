@@ -27,7 +27,7 @@ const setupCommandData = new SlashCommandBuilder()
   .addIntegerOption((opt) =>
     opt
       .setName("cycle_duration_hours")
-      .setDescription("How long each daily waifu stays (1–168 hours)")
+      .setDescription("How long each daily waifu stays (1-168 hours)")
       .setMinValue(1)
       .setMaxValue(168)
       .setRequired(false),
@@ -95,7 +95,7 @@ export const setupCommand = {
           `Setup berhasil.\n` +
           `Channel: <#${channel.id}>\n` +
           `Cycle: ${cycleDurationHours} jam\n` +
-          `(Waifu aktif saat ini tidak berubah — gunakan \`/admin reset\` untuk mulai ulang).`,
+          `(Waifu aktif saat ini tidak berubah. Gunakan \`/admin reset\` untuk mulai ulang).`,
         flags: MessageFlags.Ephemeral,
       });
 

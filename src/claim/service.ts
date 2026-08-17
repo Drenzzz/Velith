@@ -73,7 +73,7 @@ export async function attemptClaim(
       duplicateNotice = true;
       logger.info(
         { dailyWaifuId: row.id, userId, characterId: row.characterId },
-        "User already owns this character — collection skipped (claim still valid)",
+        "User already owns this character. Collection skipped, claim still valid",
       );
     } else {
       logger.error({ err, dailyWaifuId: row.id, userId }, "Collection insert failed");

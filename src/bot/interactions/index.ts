@@ -152,7 +152,7 @@ export async function handleClaimButton(interaction: ButtonInteraction): Promise
 
   const collectNote = result.collectedToCollection
     ? "Karakter ditambahkan ke koleksimu."
-    : "Kamu sudah punya karakter ini — klaim tetap dicatat tapi koleksimu tidak bertambah.";
+    : "Kamu sudah punya karakter ini. Klaim tetap dicatat tapi koleksimu tidak bertambah.";
 
   await interaction.reply({
     content: `<@${interaction.user.id}> memenangkan **${active.name}**! ${collectNote}`,
@@ -283,22 +283,6 @@ async function rebuildPagination(
     };
   }
 
-  return null;
-}
-
-function parsePaginationCustomId(customId: string): {
-  scope: string;
-  authorId: string;
-  page: number;
-} | null {
-  const parts = customId.split(":");
-  if (parts.length !== 4) return null;
-  const [prefix, direction, authorId, pageStr] = parts;
-  if (prefix !== PAGINATION_PREFIX) return null;
-  if (direction !== "prev" && direction !== "next") return null;
-  if (!PAGINATION_SCOPES.has(parts[0] === "" ? "" : "x")) {
-    // scope is not parts[0] — let's restructure
-  }
   return null;
 }
 
