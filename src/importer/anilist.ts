@@ -19,6 +19,10 @@ const ANILIST_QUERY = `
   }
 `;
 
+const MAX_ATTEMPTS = 3;
+const BASE_DELAY_MS = 1_000;
+const MAX_DELAY_MS = 8_000;
+
 interface AniListRawCharacter {
   id: number;
   name: { full: string | null; native: string | null };
@@ -61,11 +65,21 @@ export function normalize(raw: AniListRawCharacter): NormalizedCharacter {
   };
 }
 
-export async function fetchCharacters(
+function isRetryableStatus(status: number): boolean {
+  return status === 429 || (status >= 500 && status < 600);
+}
+
+function delayMs(attempt: number): number {
+  const exponential = Math.min(BASE_DELAY_MS * 2 ** (attempt - 1), MAX_DELAY_MS);
+  const jitter = Math.floor(Math.random() * 500);
+  return exponential + jitter;
+}
+
+async function attemptFetch(
   page: number,
-  perPage = 100,
-): Promise<NormalizedCharacter[]> {
-  const res = await fetch(env.ANILIST_API_URL, {
+  perPage: number,
+): Promise<Response> {
+  return await fetch(env.ANILIST_API_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     body: JSON.stringify({
@@ -73,18 +87,50 @@ export async function fetchCharacters(
       variables: { page, perPage },
     }),
   });
+}
 
-  if (!res.ok) {
-    throw new Error(`AniList HTTP ${res.status}: ${res.statusText}`);
+export async function fetchCharacters(
+  page: number,
+  perPage = 100,
+): Promise<NormalizedCharacter[]> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    let res: Response;
+    try {
+      res = await attemptFetch(page, perPage);
+    } catch (err) {
+      lastError = err as Error;
+      logger.warn({ attempt, err: lastError.message }, "AniList fetch network error, will retry");
+      if (attempt < MAX_ATTEMPTS) {
+        await new Promise((resolve) => setTimeout(resolve, delayMs(attempt)));
+        continue;
+      }
+      break;
+    }
+
+    if (!res.ok && isRetryableStatus(res.status) && attempt < MAX_ATTEMPTS) {
+      logger.warn({ attempt, status: res.status }, "AniList returned retryable status, will retry");
+      await new Promise((resolve) => setTimeout(resolve, delayMs(attempt)));
+      continue;
+    }
+
+    if (!res.ok) {
+      throw new Error(`AniList HTTP ${res.status}: ${res.statusText}`);
+    }
+
+    const json = (await res.json()) as AniListResponse;
+    if (json.errors?.length) {
+      throw new Error(`AniList GraphQL error: ${json.errors.map((e) => e.message).join("; ")}`);
+    }
+
+    const raws = json.data?.Page.characters ?? [];
+    return raws.map(normalize);
   }
 
-  const json = (await res.json()) as AniListResponse;
-  if (json.errors?.length) {
-    throw new Error(`AniList GraphQL error: ${json.errors.map((e) => e.message).join("; ")}`);
-  }
-
-  const raws = json.data?.Page.characters ?? [];
-  return raws.map(normalize);
+  throw new Error(
+    `AniList API failed after ${MAX_ATTEMPTS} attempts: ${lastError?.message ?? "unknown error"}`,
+  );
 }
 
 if (import.meta.main) {
