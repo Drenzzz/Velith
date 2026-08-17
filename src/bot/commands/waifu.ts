@@ -1,25 +1,119 @@
-import { SlashCommandBuilder, type ChatInputCommandInteraction } from "discord.js";
-import type { BotEvent } from "../types/discord.ts";
+import {
+  ChatInputCommandInteraction,
+  SlashCommandBuilder,
+  MessageFlags,
+} from "discord.js";
+import { and, eq } from "drizzle-orm";
+import { db } from "../../db/client.ts";
+import { guilds, dailyWaifus, characters, characterImages } from "../../db/schema/index.ts";
+import { buildActiveEmbed } from "../../waifu/embed.ts";
+import { logger } from "../../logger/index.ts";
+
+interface ActiveRow {
+  dailyWaifuId: string;
+  expiresAt: Date;
+  characterId: string;
+  name: string;
+  rarity: string;
+  popularity: number;
+  sourceUrl: string | null;
+  imageUrl: string | null;
+}
+
+async function loadActiveForGuild(discordGuildId: string): Promise<ActiveRow | null> {
+  const rows = await db
+    .select({
+      dailyWaifuId: dailyWaifus.id,
+      expiresAt: dailyWaifus.expiresAt,
+      characterId: dailyWaifus.characterId,
+      name: characters.name,
+      rarity: characters.rarity,
+      popularity: characters.popularity,
+      sourceUrl: characters.sourceUrl,
+    })
+    .from(dailyWaifus)
+    .innerJoin(guilds, eq(dailyWaifus.guildId, guilds.id))
+    .innerJoin(characters, eq(dailyWaifus.characterId, characters.id))
+    .where(
+      and(
+        eq(guilds.discordGuildId, discordGuildId),
+        eq(dailyWaifus.status, "ACTIVE"),
+      ),
+    )
+    .limit(1);
+
+  const row = rows[0];
+  if (!row) return null;
+
+  const imageRows = await db
+    .select({ url: characterImages.url })
+    .from(characterImages)
+    .where(eq(characterImages.characterId, row.characterId))
+    .limit(1);
+
+  return {
+    dailyWaifuId: row.dailyWaifuId,
+    expiresAt: row.expiresAt,
+    characterId: row.characterId,
+    name: row.name,
+    rarity: row.rarity,
+    popularity: row.popularity,
+    sourceUrl: row.sourceUrl,
+    imageUrl: imageRows[0]?.url ?? null,
+  };
+}
 
 export const waifuCommand = {
   data: new SlashCommandBuilder()
     .setName("waifu")
     .setDescription("Tampilkan Waifu of the Day yang sedang aktif."),
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {
-    await interaction.reply({
-      content: "Waifu of the Day belum tersedia — M3 akan mengimplementasikan ini.",
-      ephemeral: true,
-    });
-  },
-};
+    if (!interaction.guildId) {
+      await interaction.reply({
+        content: "Command ini hanya bisa dipakai di dalam server.",
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
 
-export type CommandModule = typeof waifuCommand;
+    try {
+      const active = await loadActiveForGuild(interaction.guildId);
 
-export const waifuEvent: BotEvent<"interactionCreate"> = {
-  name: "interactionCreate",
-  async execute(interaction) {
-    if (!interaction.isChatInputCommand()) return;
-    if (interaction.commandName !== "waifu") return;
-    await waifuCommand.execute(interaction);
+      if (!active) {
+        await interaction.reply({
+          content: "Belum ada waifu aktif. Tunggu scheduler tick berikutnya (maks 1 menit).",
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      if (active.expiresAt.getTime() <= Date.now()) {
+        await interaction.reply({
+          content: "Waifu aktif sudah kedaluwarsa. Tunggu scheduler tick berikutnya.",
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      const embed = buildActiveEmbed({
+        choice: {
+          characterId: active.characterId,
+          name: active.name,
+          rarity: active.rarity,
+          popularity: active.popularity,
+          imageUrl: active.imageUrl,
+          sourceUrl: active.sourceUrl,
+        },
+        expiresAt: active.expiresAt,
+      });
+
+      await interaction.reply({ embeds: [embed] });
+    } catch (err) {
+      logger.error({ err, guildId: interaction.guildId }, "/waifu failed");
+      await interaction.reply({
+        content: "Gagal memuat waifu aktif.",
+        flags: MessageFlags.Ephemeral,
+      });
+    }
   },
 };
