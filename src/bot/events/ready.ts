@@ -1,7 +1,7 @@
 import type { BotEvent } from "../types/discord.ts";
 
-export const readyEvent: BotEvent<"ready"> = {
-  name: "ready",
+export const readyEvent: BotEvent<"clientReady"> = {
+  name: "clientReady",
   once: true,
   execute(client) {
     console.log(JSON.stringify({

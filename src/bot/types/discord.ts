@@ -9,7 +9,7 @@ export interface BotEvent<K extends keyof DiscordEventMap | string = string> {
 }
 
 interface DiscordEventMap {
-  ready: [client: import("discord.js").Client<true>];
+  clientReady: [client: import("discord.js").Client<true>];
   error: [error: Error];
   interactionCreate: [interaction: import("discord.js").Interaction];
 }
