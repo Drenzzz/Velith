@@ -1,6 +1,6 @@
-# Daily Waifu Discord Bot
+# Velith
 
-Discord collection game. One server gets one waifu per cycle. Members tap the claim button. First tap wins. Database is the source of truth.
+Velith is a Discord collection game. One server gets one waifu per cycle. Members tap the claim button. First tap wins. The database is the source of truth.
 
 Female character pool only. Pool sourced from AniList, normalized, deduplicated, content-filtered.
 
@@ -127,8 +127,8 @@ curl -fsSL https://get.docker.com | sudo sh
 sudo usermod -aG docker $USER
 
 # Clone repo and configure
-git clone <repo-url> /opt/daily-waifu-bot
-cd /opt/daily-waifu-bot
+git clone <repo-url> /opt/velith
+cd /opt/velith
 cp .env.example .env
 # Edit .env with production values
 
@@ -147,7 +147,7 @@ PostgreSQL needs regular backups. The included script uses `pg_dump` with 7-day 
 crontab -e
 
 # Add daily backup at 03:00 server time
-0 3 * * * /opt/daily-waifu-bot/scripts/backup.sh >> /var/log/waifu-backup.log 2>&1
+0 3 * * * /opt/velith/scripts/backup.sh >> /var/log/waifu-backup.log 2>&1
 ```
 
 Backup files are stored in `./backups/` with timestamp filenames. Restore:

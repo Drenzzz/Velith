@@ -1,5 +1,5 @@
 {
-  "name": "daily-waifu-bot",
+  "name": "velith",
   "version": "0.1.0",
   "module": "src/index.ts",
   "type": "module",

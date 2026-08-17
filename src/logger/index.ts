@@ -14,7 +14,7 @@ export const logger = pino({
       }
     : {}),
   base: {
-    app: "daily-waifu-bot",
+    app: "velith",
     env: env.APP_ENV,
   },
   timestamp: pino.stdTimeFunctions.isoTime,

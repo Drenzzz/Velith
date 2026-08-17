@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Daily Waifu Bot database backup.
+# Velith database backup.
 # Usage: ./scripts/backup.sh
-# Cron example: 0 3 * * * /opt/bot/scripts/backup.sh >> /var/log/waifu-backup.log 2>&1
+# Cron example: 0 3 * * * /opt/velith/scripts/backup.sh >> /var/log/waifu-backup.log 2>&1
 set -euo pipefail
 
 BACKUP_DIR="${BACKUP_DIR:-./backups}"

@@ -8,7 +8,7 @@ logger.info(
     env: process.env.APP_ENV,
     logLevel: process.env.LOG_LEVEL,
   },
-  "Daily Waifu Bot starting",
+  "Velith starting",
 );
 
 const client = await startBot();
