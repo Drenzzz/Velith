@@ -1,4 +1,4 @@
-import { and, eq, sql, asc } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import type { Client } from "discord.js";
 import { db } from "../db/client.ts";
 import { guilds, dailyWaifus, type DailyWaifu } from "../db/schema/index.ts";
@@ -33,10 +33,10 @@ async function loadActiveForGuild(guildId: string): Promise<ActiveRow | null> {
     .where(
       and(
         eq(dailyWaifus.guildId, guildId),
-        eq(dailyWaifus.status, "ACTIVE"),
+        inArray(dailyWaifus.status, ["ACTIVE", "CLAIMED"]),
       ),
     )
-    .orderBy(asc(dailyWaifus.spawnedAt))
+    .orderBy(desc(dailyWaifus.spawnedAt))
     .limit(1);
   return rows[0] ?? null;
 }
@@ -48,7 +48,7 @@ async function markExpired(id: string): Promise<void> {
     .where(
       and(
         eq(dailyWaifus.id, id),
-        eq(dailyWaifus.status, "ACTIVE"),
+        inArray(dailyWaifus.status, ["ACTIVE", "CLAIMED"]),
       ),
     );
 }

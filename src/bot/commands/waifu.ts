@@ -3,7 +3,7 @@ import {
   SlashCommandBuilder,
   MessageFlags,
 } from "discord.js";
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { db } from "../../db/client.ts";
 import { guilds, dailyWaifus, characters, characterImages } from "../../db/schema/index.ts";
 import { buildActiveEmbed } from "../../waifu/embed.ts";
@@ -37,9 +37,10 @@ async function loadActiveForGuild(discordGuildId: string): Promise<ActiveRow | n
     .where(
       and(
         eq(guilds.discordGuildId, discordGuildId),
-        eq(dailyWaifus.status, "ACTIVE"),
+        inArray(dailyWaifus.status, ["ACTIVE", "CLAIMED"]),
       ),
     )
+    .orderBy(desc(dailyWaifus.spawnedAt))
     .limit(1);
 
   const row = rows[0];

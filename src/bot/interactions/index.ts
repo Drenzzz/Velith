@@ -6,7 +6,7 @@ import {
   type ActionRowBuilder,
   type ButtonBuilder,
 } from "discord.js";
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import type { BotEvent } from "../types/discord.ts";
 import { db } from "../../db/client.ts";
 import {
@@ -67,9 +67,10 @@ async function loadActiveWaifuForGuild(
     .where(
       and(
         eq(dailyWaifus.guildId, internalGuildId),
-        eq(dailyWaifus.status, "ACTIVE"),
+        inArray(dailyWaifus.status, ["ACTIVE", "CLAIMED"]),
       ),
     )
+    .orderBy(desc(dailyWaifus.spawnedAt))
     .limit(1);
 
   const waifu = waifuRows[0];

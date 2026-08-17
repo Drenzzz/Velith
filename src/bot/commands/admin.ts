@@ -4,7 +4,7 @@ import {
   SlashCommandBuilder,
   MessageFlags,
 } from "discord.js";
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { db } from "../../db/client.ts";
 import {
   guilds as guildsTable,
@@ -37,9 +37,10 @@ async function getActiveWaifuForGuild(discordGuildId: string) {
     .where(
       and(
         eq(dailyWaifus.guildId, internalGuildId),
-        eq(dailyWaifus.status, "ACTIVE"),
+        inArray(dailyWaifus.status, ["ACTIVE", "CLAIMED"]),
       ),
     )
+    .orderBy(desc(dailyWaifus.spawnedAt))
     .limit(1);
   return { internalGuildId, active: rows[0] ?? null };
 }
@@ -51,7 +52,7 @@ async function expireActive(dailyWaifuId: string): Promise<void> {
     .where(
       and(
         eq(dailyWaifus.id, dailyWaifuId),
-        eq(dailyWaifus.status, "ACTIVE"),
+        inArray(dailyWaifus.status, ["ACTIVE", "CLAIMED"]),
       ),
     );
 }
