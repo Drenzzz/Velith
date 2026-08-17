@@ -1,0 +1,9 @@
+[install]
+# Use exact versions (no caret/tilde on install)
+exact = false
+# Auto-install peer deps
+auto = "auto"
+
+[run]
+# Use Bun's built-in SQLite/Postgres/etc clients
+bun = true

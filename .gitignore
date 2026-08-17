@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+
+# Bun
+# bun.lockb is committed (text format `bun.lock` in Bun 1.2+, ignored by older tools)
+
+# Build output
+dist/
+*.tsbuildinfo
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Test coverage
+coverage/
+
+# Drizzle (generated artifacts that should not be committed)
+# drizzle/meta/_journal.json is committed; migrations sql are committed
