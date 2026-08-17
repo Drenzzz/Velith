@@ -31,7 +31,7 @@ export function createClient(): Client {
   return client;
 }
 
-export async function startBot(): Promise<void> {
+export async function startBot(): Promise<Client> {
   const client = createClient();
   try {
     await client.login(env.DISCORD_TOKEN);
@@ -39,4 +39,5 @@ export async function startBot(): Promise<void> {
     logger.fatal({ err }, "Bot login failed");
     process.exit(1);
   }
+  return client;
 }

@@ -1,3 +1,4 @@
+import type { Client } from "discord.js";
 import { logger } from "../logger/index.ts";
 import { tickOnceAll } from "./tick.ts";
 
@@ -7,8 +8,11 @@ export interface SchedulerHandle {
   stop(): void;
 }
 
-export function startScheduler(intervalMs = DEFAULT_INTERVAL_MS): SchedulerHandle {
-  logger.info({ intervalMs }, "Scheduler started");
+export function startScheduler(
+  intervalMs = DEFAULT_INTERVAL_MS,
+  client: Client | null = null,
+): SchedulerHandle {
+  logger.info({ intervalMs, hasClient: client !== null }, "Scheduler started");
 
   let running = false;
 
@@ -19,7 +23,7 @@ export function startScheduler(intervalMs = DEFAULT_INTERVAL_MS): SchedulerHandl
     }
     running = true;
     try {
-      await tickOnceAll();
+      await tickOnceAll(client);
     } catch (err) {
       logger.error({ err }, "Tick failed");
     } finally {
