@@ -6,6 +6,7 @@ import type { Rarity } from "../db/schema/characters.ts";
 const ANILIST_QUERY = `
   query ($page: Int, $perPage: Int) {
     Page(page: $page, perPage: $perPage) {
+      pageInfo { hasNextPage }
       characters(sort: FAVOURITES_DESC) {
         id
         name { full native }
@@ -34,7 +35,12 @@ interface AniListRawCharacter {
 }
 
 interface AniListResponse {
-  data?: { Page: { characters: AniListRawCharacter[] } };
+  data?: {
+    Page: {
+      pageInfo: { hasNextPage: boolean };
+      characters: AniListRawCharacter[];
+    };
+  };
   errors?: Array<{ message: string }>;
 }
 
@@ -91,8 +97,8 @@ async function attemptFetch(
 
 export async function fetchCharacters(
   page: number,
-  perPage = 100,
-): Promise<NormalizedCharacter[]> {
+  perPage = 50,
+): Promise<{ characters: NormalizedCharacter[]; hasNextPage: boolean }> {
   let lastError: Error | null = null;
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
@@ -125,7 +131,10 @@ export async function fetchCharacters(
     }
 
     const raws = json.data?.Page.characters ?? [];
-    return raws.map(normalize);
+    return {
+      characters: raws.map(normalize),
+      hasNextPage: json.data?.Page.pageInfo.hasNextPage ?? false,
+    };
   }
 
   throw new Error(
@@ -135,8 +144,8 @@ export async function fetchCharacters(
 
 if (import.meta.main) {
   try {
-    const chars = await fetchCharacters(1, 5);
-    logger.info({ count: chars.length, sample: chars[0] }, "AniList sample fetched");
+    const result = await fetchCharacters(1, 5);
+    logger.info({ count: result.characters.length, sample: result.characters[0] }, "AniList sample fetched");
   } catch (err) {
     logger.error({ err }, "AniList fetch failed");
     process.exit(1);

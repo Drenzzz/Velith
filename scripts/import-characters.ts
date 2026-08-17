@@ -6,7 +6,8 @@ import { blacklists } from "../src/db/schema/index.ts";
 import { isContentClean, isBlacklisted, isFemale, type BlacklistEntry } from "../src/character/filter.ts";
 import { logger } from "../src/logger/index.ts";
 
-const PER_PAGE = 100;
+// AniList Page.perPage has a maximum of 50.
+const PER_PAGE = 50;
 const DEFAULT_PAGES = 1;
 
 async function loadBlacklists(): Promise<BlacklistEntry[]> {
@@ -41,11 +42,15 @@ async function runImport(totalPages: number): Promise<void> {
   let totalSkippedFilter = 0;
   let totalSkippedBlacklist = 0;
   let totalSkippedGender = 0;
+  let pagesProcessed = 0;
 
   for (let page = 1; page <= totalPages; page++) {
     let chars: NormalizedCharacter[] = [];
+    let hasNextPage = false;
     try {
-      chars = await fetchCharacters(page, PER_PAGE);
+      const result = await fetchCharacters(page, PER_PAGE);
+      chars = result.characters;
+      hasNextPage = result.hasNextPage;
     } catch (err) {
       logger.error({ err, page }, "Fetch failed, aborting import");
       break;
@@ -81,7 +86,10 @@ async function runImport(totalPages: number): Promise<void> {
     totalSkippedFilter += filtered;
     totalSkippedBlacklist += blacklisted;
     totalSkippedGender += skippedGender;
+    pagesProcessed++;
     reportStage(page, chars.length, kept, filtered, blacklisted, skippedGender);
+
+    if (!hasNextPage) break;
   }
 
   logger.info(
@@ -90,7 +98,7 @@ async function runImport(totalPages: number): Promise<void> {
       totalSkippedFilter,
       totalSkippedBlacklist,
       totalSkippedGender,
-      pages: totalPages,
+      pages: pagesProcessed,
     },
     "Import complete",
   );
