@@ -3,7 +3,7 @@ import { upsertCharacter } from "../src/importer/service.ts";
 import { closeDb } from "../src/db/client.ts";
 import { db } from "../src/db/client.ts";
 import { blacklists } from "../src/db/schema/index.ts";
-import { isContentClean, isBlacklisted, type BlacklistEntry } from "../src/character/filter.ts";
+import { isContentClean, isBlacklisted, isFemale, type BlacklistEntry } from "../src/character/filter.ts";
 import { logger } from "../src/logger/index.ts";
 
 const PER_PAGE = 100;
@@ -24,8 +24,15 @@ async function loadBlacklists(): Promise<BlacklistEntry[]> {
   }));
 }
 
-function reportStage(page: number, total: number, kept: number, filtered: number, blacklisted: number): void {
-  logger.info({ page, total, kept, filtered, blacklisted }, "Import page processed");
+function reportStage(
+  page: number,
+  total: number,
+  kept: number,
+  filtered: number,
+  blacklisted: number,
+  skippedGender: number,
+): void {
+  logger.info({ page, total, kept, filtered, blacklisted, skippedGender }, "Import page processed");
 }
 
 async function runImport(totalPages: number): Promise<void> {
@@ -33,6 +40,7 @@ async function runImport(totalPages: number): Promise<void> {
   let totalImported = 0;
   let totalSkippedFilter = 0;
   let totalSkippedBlacklist = 0;
+  let totalSkippedGender = 0;
 
   for (let page = 1; page <= totalPages; page++) {
     let chars: NormalizedCharacter[] = [];
@@ -46,8 +54,13 @@ async function runImport(totalPages: number): Promise<void> {
     let kept = 0;
     let filtered = 0;
     let blacklisted = 0;
+    let skippedGender = 0;
 
     for (const char of chars) {
+      if (!isFemale(char)) {
+        skippedGender++;
+        continue;
+      }
       if (!isContentClean(char)) {
         filtered++;
         continue;
@@ -67,11 +80,18 @@ async function runImport(totalPages: number): Promise<void> {
     totalImported += kept;
     totalSkippedFilter += filtered;
     totalSkippedBlacklist += blacklisted;
-    reportStage(page, chars.length, kept, filtered, blacklisted);
+    totalSkippedGender += skippedGender;
+    reportStage(page, chars.length, kept, filtered, blacklisted, skippedGender);
   }
 
   logger.info(
-    { totalImported, totalSkippedFilter, totalSkippedBlacklist, pages: totalPages },
+    {
+      totalImported,
+      totalSkippedFilter,
+      totalSkippedBlacklist,
+      totalSkippedGender,
+      pages: totalPages,
+    },
     "Import complete",
   );
 }
