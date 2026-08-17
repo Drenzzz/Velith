@@ -45,7 +45,12 @@ async function markExpired(id: string): Promise<void> {
   await db
     .update(dailyWaifus)
     .set({ status: "EXPIRED" })
-    .where(eq(dailyWaifus.id, id));
+    .where(
+      and(
+        eq(dailyWaifus.id, id),
+        eq(dailyWaifus.status, "ACTIVE"),
+      ),
+    );
 }
 
 async function insertSpawn(
