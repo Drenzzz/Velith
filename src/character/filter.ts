@@ -42,6 +42,10 @@ export function isBlacklisted(
   return false;
 }
 
+export function isFemale(input: { gender?: string | null }): boolean {
+  return typeof input.gender === "string" && input.gender.toLowerCase() === "female";
+}
+
 if (import.meta.main) {
   const clean: ContentInput = { name: "Makima", description: "Public Safety Devil Hunter." };
   const nsfw: ContentInput = { name: "Test", description: "NSFW content here" };
@@ -60,5 +64,16 @@ if (import.meta.main) {
     byName: isBlacklisted({ name: "test char", anilistId: 1, malId: 1 }, blacklists),
     byAnilist: isBlacklisted({ name: "Other", anilistId: 12345, malId: 1 }, blacklists),
     noMatch: isBlacklisted({ name: "Safe", anilistId: 1, malId: 1 }, blacklists),
+  }));
+
+  console.log(JSON.stringify({
+    femaleCapital: isFemale({ gender: "Female" }),
+    femaleLower: isFemale({ gender: "female" }),
+    femaleUpper: isFemale({ gender: "FEMALE" }),
+    male: isFemale({ gender: "Male" }),
+    nullGender: isFemale({ gender: null }),
+    undefinedGender: isFemale({}),
+    nonBinary: isFemale({ gender: "Non-binary" }),
+    empty: isFemale({ gender: "" }),
   }));
 }
