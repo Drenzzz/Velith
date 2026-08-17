@@ -1,0 +1,197 @@
+import {
+  ChatInputCommandInteraction,
+  PermissionFlagsBits,
+  SlashCommandBuilder,
+  MessageFlags,
+} from "discord.js";
+import { and, eq } from "drizzle-orm";
+import { db } from "../../db/client.ts";
+import {
+  guilds as guildsTable,
+  dailyWaifus,
+  auditLogs,
+} from "../../db/schema/index.ts";
+import { pickRandomForGuild } from "../../waifu/spawn.ts";
+import { postWaifuEmbed } from "../../waifu/post.ts";
+import type { Client } from "discord.js";
+import { logger } from "../../logger/index.ts";
+
+async function getInternalGuildId(discordGuildId: string): Promise<string | null> {
+  const rows = await db
+    .select({ id: guildsTable.id })
+    .from(guildsTable)
+    .where(eq(guildsTable.discordGuildId, discordGuildId))
+    .limit(1);
+  return rows[0]?.id ?? null;
+}
+
+async function getActiveWaifuForGuild(discordGuildId: string) {
+  const internalGuildId = await getInternalGuildId(discordGuildId);
+  if (!internalGuildId) return null;
+  const rows = await db
+    .select({
+      id: dailyWaifus.id,
+      status: dailyWaifus.status,
+    })
+    .from(dailyWaifus)
+    .where(
+      and(
+        eq(dailyWaifus.guildId, internalGuildId),
+        eq(dailyWaifus.status, "ACTIVE"),
+      ),
+    )
+    .limit(1);
+  return { internalGuildId, active: rows[0] ?? null };
+}
+
+async function expireActive(dailyWaifuId: string): Promise<void> {
+  await db
+    .update(dailyWaifus)
+    .set({ status: "EXPIRED" })
+    .where(
+      and(
+        eq(dailyWaifus.id, dailyWaifuId),
+        eq(dailyWaifus.status, "ACTIVE"),
+      ),
+    );
+}
+
+async function logAudit(
+  guildId: string | null,
+  userId: string,
+  action: "reroll" | "spawn" | "reset",
+  metadata: Record<string, unknown>,
+): Promise<void> {
+  try {
+    await db.insert(auditLogs).values({
+      guildId,
+      userId,
+      action,
+      metadata,
+    });
+  } catch (err) {
+    logger.warn({ err, action }, "Audit log insert failed (best-effort)");
+  }
+}
+
+async function performAdminSpawn(
+  interaction: ChatInputCommandInteraction,
+  client: Client,
+  action: "reroll" | "spawn" | "reset",
+): Promise<void> {
+  if (!interaction.guildId) {
+    await interaction.reply({ content: "Hanya untuk server.", flags: MessageFlags.Ephemeral });
+    return;
+  }
+  if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
+    await interaction.reply({
+      content: "Butuh permission Administrator.",
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
+  const ctx = await getActiveWaifuForGuild(interaction.guildId);
+  if (!ctx?.internalGuildId) {
+    await interaction.reply({
+      content: "Server belum di-setup. Jalankan /setup terlebih dahulu.",
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
+  const guildConfigRows = await db
+    .select({ waifuChannelId: guildsTable.waifuChannelId, cycleDurationHours: guildsTable.cycleDurationHours })
+    .from(guildsTable)
+    .where(eq(guildsTable.id, ctx.internalGuildId))
+    .limit(1);
+  const config = guildConfigRows[0];
+
+  if (!config?.waifuChannelId) {
+    await interaction.reply({
+      content: "Channel waifu belum di-set. Jalankan /setup.",
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
+  if (ctx.active) {
+    await expireActive(ctx.active.id);
+  }
+
+  const choice = await pickRandomForGuild(ctx.internalGuildId);
+  if (!choice) {
+    await interaction.reply({
+      content: "Pool karakter kosong.",
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
+  const expiresAt = new Date(Date.now() + config.cycleDurationHours * 60 * 60_000);
+
+  const inserted = await db
+    .insert(dailyWaifus)
+    .values({
+      guildId: ctx.internalGuildId,
+      characterId: choice.characterId,
+      expiresAt,
+      status: "ACTIVE",
+    })
+    .returning({ id: dailyWaifus.id });
+  const newId = inserted[0]?.id;
+  if (!newId) throw new Error("Insert returned no id");
+
+  await logAudit(ctx.internalGuildId, interaction.user.id, action, {
+    dailyWaifuId: newId,
+    characterId: choice.characterId,
+    expiredPreviousId: ctx.active?.id ?? null,
+  });
+
+  const post = await postWaifuEmbed(client, config.waifuChannelId, choice, expiresAt);
+
+  logger.info(
+    {
+      guildId: interaction.guildId,
+      dailyWaifuId: newId,
+      characterName: choice.name,
+      action,
+      posted: !!post,
+    },
+    "Admin action executed",
+  );
+
+  await interaction.reply({
+    content: `Admin action **${action}** selesai. Karakter baru: **${choice.name}** (${choice.rarity}).`,
+    flags: MessageFlags.Ephemeral,
+  });
+}
+
+export const adminRerollCommand = {
+  data: new SlashCommandBuilder()
+    .setName("admin")
+    .setDescription("Admin commands")
+    .addSubcommand((sub) =>
+      sub.setName("reroll").setDescription("Ganti karakter aktif sekarang dengan karakter baru."),
+    )
+    .addSubcommand((sub) =>
+      sub.setName("spawn").setDescription("Paksa spawn karakter baru (mark expired + spawn)."),
+    ),
+  async execute(interaction: ChatInputCommandInteraction): Promise<void> {
+    if (!interaction.client) {
+      await interaction.reply({ content: "Internal error.", flags: MessageFlags.Ephemeral });
+      return;
+    }
+
+    const subcommand = interaction.options.getSubcommand();
+    if (subcommand !== "reroll" && subcommand !== "spawn") {
+      await interaction.reply({
+        content: `Subcommand tidak dikenal: ${subcommand}`,
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    await performAdminSpawn(interaction, interaction.client, subcommand);
+  },
+};
