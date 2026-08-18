@@ -32,7 +32,7 @@ const setupCommandData = new SlashCommandBuilder()
       .setMaxValue(168)
       .setRequired(false),
   )
-  .addMentionableOption((opt) =>
+  .addRoleOption((opt) =>
     opt
       .setName("alerts_roles")
       .setDescription("Roles to ping when a new waifu appears (mentionable required). Leave empty to clear.")
@@ -43,10 +43,11 @@ function extractRoleIds(input: unknown): string[] {
   if (!Array.isArray(input)) return [];
   const ids = new Set<string>();
   for (const v of input) {
-    if (typeof v !== "string") continue;
-    if (v.length === 0) continue;
-    if (v === "@everyone") continue;
-    ids.add(v);
+    if (!v || typeof v !== "object") continue;
+    const id = (v as { id?: unknown }).id;
+    if (typeof id !== "string") continue;
+    if (id.length === 0 || id === "@everyone") continue;
+    ids.add(id);
   }
   return Array.from(ids);
 }
