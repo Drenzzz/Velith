@@ -35,6 +35,14 @@ bun run start
 
 Run `/setup` in your Discord server to register the waifu channel and cycle duration.
 
+Optional alert roles let specific roles (and their members) get notified when a new waifu spawns.
+
+```bash
+/setup channel:#waifu cycle_duration_hours:12 alerts_roles:@Waifu Alerts @Daily
+```
+
+The chosen roles must be **mentionable** in your server. Leave `alerts_roles` empty to clear the list. Existing data such as the active waifu is preserved across runs.
+
 ## Public Installation
 
 Velith supports multiple Discord servers. Each server gets its own waifu channel, cycle, collection, and claim history.
@@ -90,7 +98,7 @@ No HTTP server. No web dashboard. All interaction happens through Discord.
 | `/leaderboard` | Show top collectors, paginated | All members |
 | `/history` | Show recent claims, paginated | All members |
 | `/invite` | Generate a link to add Velith to another server | All members |
-| `/setup` | Configure waifu channel and cycle duration | Administrator |
+| `/setup` | Configure waifu channel, cycle duration, and alert roles | Administrator |
 | `/admin reroll` | Replace the active waifu | Administrator |
 | `/admin spawn` | Force spawn a new waifu | Administrator |
 | `/admin reset` | Mark active as expired and spawn a new one | Administrator |
