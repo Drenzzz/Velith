@@ -14,6 +14,7 @@ import {
   buildPaginationRow,
   pageSlice,
 } from "../../commands/pagination.ts";
+import { resolveDisplayNames } from "../display-name.ts";
 import { logger } from "../../logger/index.ts";
 
 const LEADERBOARD_SCOPE = "leaderboard";
@@ -50,7 +51,8 @@ export const leaderboardCommand = {
     .setName("leaderboard")
     .setDescription("Rank users by character count (paginated)."),
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {
-    if (!interaction.guildId) {
+    const guild = interaction.guild;
+    if (!interaction.guildId || !guild) {
       await interaction.reply({ content: "Server only.", flags: MessageFlags.Ephemeral });
       return;
     }
@@ -59,12 +61,14 @@ export const leaderboardCommand = {
       const rows = await loadLeaderboard(interaction.guildId);
       const total = rows.length;
       const page = 1;
+      const pageRows = pageSlice(rows, page);
+      const displayNames = await resolveDisplayNames(guild, pageRows.map((row) => row.userId));
 
       const embed = buildPaginatedEmbed({
         title: "🏆 Leaderboard",
         description: "Top collectors by character count.",
-        rows: pageSlice(rows, page).map((row, idx) => ({
-          label: `#${page * 10 - 10 + idx + 1} <@${row.userId}>`,
+        rows: pageRows.map((row, idx) => ({
+          label: `#${page * 10 - 10 + idx + 1} ${displayNames.get(row.userId) ?? "Unknown user"}`,
           value: `${row.count} characters`,
           inline: false,
         })),

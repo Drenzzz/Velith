@@ -5,6 +5,7 @@ import {
   type EmbedBuilder,
   type ActionRowBuilder,
   type ButtonBuilder,
+  type Guild,
 } from "discord.js";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import type { BotEvent } from "../types/discord.ts";
@@ -24,6 +25,7 @@ import {
   buildPaginationRow,
   pageSlice,
 } from "../../commands/pagination.ts";
+import { resolveDisplayNames } from "../display-name.ts";
 import { logger } from "../../logger/index.ts";
 
 const CLAIM_BUTTON_ID = "waifu:claim";
@@ -103,7 +105,8 @@ export async function handleClaimButton(interaction: ButtonInteraction): Promise
     return;
   }
 
-  if (!interaction.guildId) {
+  const guild = interaction.guild;
+  if (!interaction.guildId || !guild) {
     await interaction.reply({
       content: "Can only be used in a server.",
       flags: MessageFlags.Ephemeral,
@@ -169,6 +172,7 @@ interface PaginationTarget {
 async function rebuildPagination(
   scope: string,
   discordGuildId: string,
+  guild: Guild,
   userId: string,
   page: number,
 ): Promise<PaginationTarget | null> {
@@ -230,11 +234,13 @@ async function rebuildPagination(
       .groupBy(collections.userId)
       .orderBy(desc(sql`count(*)`));
 
+    const pageRows = pageSlice(rows, page);
+    const displayNames = await resolveDisplayNames(guild, pageRows.map((row) => row.userId));
     const embed = buildPaginatedEmbed({
       title: "🏆 Leaderboard",
       description: "Top collectors by character count.",
-      rows: pageSlice(rows, page).map((row, idx) => ({
-        label: `#${page * 10 - 10 + idx + 1} <@${row.userId}>`,
+      rows: pageRows.map((row, idx) => ({
+        label: `#${page * 10 - 10 + idx + 1} ${displayNames.get(row.userId) ?? "Unknown user"}`,
         value: `${row.count} characters`,
         inline: false,
       })),
@@ -264,12 +270,14 @@ async function rebuildPagination(
       .where(eq(claimHistory.guildId, internalGuildId))
       .orderBy(desc(claimHistory.claimedAt));
 
+    const pageRows = pageSlice(rows, page);
+    const displayNames = await resolveDisplayNames(guild, pageRows.map((row) => row.userId));
     const embed = buildPaginatedEmbed({
-title: "📜 Claim History",
-        description: "Last 10 claims in this server.",
-      rows: pageSlice(rows, page).map((row) => ({
+      title: "📜 Claim History",
+      description: "Last 10 claims in this server.",
+      rows: pageRows.map((row) => ({
         label: row.characterName,
-        value: `<@${row.userId}> • ${row.rarity} • <t:${Math.floor(row.claimedAt.getTime() / 1000)}:R>`,
+        value: `${displayNames.get(row.userId) ?? "Unknown user"} • ${row.rarity} • <t:${Math.floor(row.claimedAt.getTime() / 1000)}:R>`,
         inline: false,
       })),
       page,
@@ -324,7 +332,8 @@ async function handlePaginationButton(interaction: ButtonInteraction): Promise<v
     return;
   }
 
-  if (!interaction.guildId) {
+  const guild = interaction.guild;
+  if (!interaction.guildId || !guild) {
     await interaction.reply({
       content: "Server only.",
       flags: MessageFlags.Ephemeral,
@@ -335,6 +344,7 @@ async function handlePaginationButton(interaction: ButtonInteraction): Promise<v
   const target = await rebuildPagination(
     parsed.scope,
     interaction.guildId,
+    guild,
     parsed.authorId,
     parsed.page,
   );
