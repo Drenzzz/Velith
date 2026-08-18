@@ -75,11 +75,13 @@ async function insertSpawn(
 async function getGuildConfig(guildId: string): Promise<{
   waifuChannelId: string | null;
   cycleDurationHours: number;
+  notificationRoleIds: string[];
 }> {
   const rows = await db
     .select({
       waifuChannelId: guilds.waifuChannelId,
       cycleDurationHours: guilds.cycleDurationHours,
+      notificationRoleIds: guilds.notificationRoleIds,
     })
     .from(guilds)
     .where(eq(guilds.id, guildId))
@@ -87,6 +89,7 @@ async function getGuildConfig(guildId: string): Promise<{
   return {
     waifuChannelId: rows[0]?.waifuChannelId ?? null,
     cycleDurationHours: rows[0]?.cycleDurationHours ?? 24,
+    notificationRoleIds: rows[0]?.notificationRoleIds ?? [],
   };
 }
 
@@ -117,7 +120,9 @@ export async function tickOnceForGuild(
 
   let messageId: string | undefined;
   if (client && config.waifuChannelId) {
-    const post = await postWaifuEmbed(client, config.waifuChannelId, choice, expiresAt);
+    const post = await postWaifuEmbed(client, config.waifuChannelId, choice, expiresAt, {
+      notificationRoleIds: config.notificationRoleIds,
+    });
     if (post) {
       messageId = post.messageId;
     }

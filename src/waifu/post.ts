@@ -2,7 +2,8 @@ import {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
-  MessageFlags,
+  AllowedMentionsTypes,
+  type APIAllowedMentions,
   type Client,
   type SendableChannels,
 } from "discord.js";
@@ -16,11 +17,33 @@ export interface PostResult {
   channelId: string;
 }
 
+export interface PostWaifuOptions {
+  notificationRoleIds?: string[];
+}
+
+function sanitizeRoleIds(ids: readonly string[] | undefined): string[] {
+  if (!ids) return [];
+  const seen = new Set<string>();
+  for (const id of ids) {
+    if (!id || id === "@everyone") continue;
+    seen.add(id);
+  }
+  return Array.from(seen);
+}
+
+function buildAllowedMentions(roleIds: string[]): APIAllowedMentions {
+  return {
+    parse: [AllowedMentionsTypes.Role],
+    roles: roleIds,
+  };
+}
+
 export async function postWaifuEmbed(
   client: Client,
   channelId: string,
   choice: SpawnChoice,
   expiresAt: Date,
+  options: PostWaifuOptions = {},
 ): Promise<PostResult | null> {
   let resolvedChannel;
   try {
@@ -46,19 +69,25 @@ export async function postWaifuEmbed(
   }
 
   const sendable = resolvedChannel as SendableChannels;
-  const embed = buildActiveEmbed({ choice, expiresAt });
+  const roleIds = sanitizeRoleIds(options.notificationRoleIds);
+  const embed = buildActiveEmbed({
+    choice,
+    expiresAt,
+    pingRoles: roleIds,
+  });
   const button = new ButtonBuilder()
     .setCustomId(CLAIM_BUTTON_ID)
     .setLabel("💖 CLAIM")
     .setStyle(ButtonStyle.Primary);
 
   const row = new ActionRowBuilder<ButtonBuilder>().addComponents(button);
+  const allowedMentions: APIAllowedMentions = buildAllowedMentions(roleIds);
 
   try {
     const message = await sendable.send({
       embeds: [embed],
       components: [row],
-      flags: MessageFlags.SuppressNotifications,
+      allowedMentions,
     });
     return { messageId: message.id, channelId };
   } catch (err) {
