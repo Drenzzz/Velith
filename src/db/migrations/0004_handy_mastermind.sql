@@ -1,0 +1,1 @@
+ALTER TABLE "guilds" ADD COLUMN "notification_role_ids" text[] DEFAULT '{}' NOT NULL;

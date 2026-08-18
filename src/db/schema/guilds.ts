@@ -8,6 +8,10 @@ export const guilds = pgTable(
     waifuChannelId: text("waifu_channel_id"),
     activeMessageId: text("active_message_id"),
     cycleDurationHours: integer("cycle_duration_hours").notNull().default(24),
+    notificationRoleIds: text("notification_role_ids")
+      .array()
+      .notNull()
+      .default([]),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
