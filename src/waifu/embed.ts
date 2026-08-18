@@ -6,6 +6,7 @@ export interface WaifuEmbedContext {
   choice: SpawnChoice;
   expiresAt: Date;
   claimedByMention?: string;
+  pingRoles?: string[];
 }
 
 function rarityEmoji(rarity: string): string {
@@ -20,7 +21,7 @@ function rarityEmoji(rarity: string): string {
 }
 
 export function buildActiveEmbed(ctx: WaifuEmbedContext): EmbedBuilder {
-  const { choice, expiresAt } = ctx;
+  const { choice, expiresAt, pingRoles } = ctx;
   const embed = new EmbedBuilder()
     .setTitle("💖 WAIFU OF THE DAY")
     .setColor(Colors.Fuchsia)
@@ -31,10 +32,18 @@ export function buildActiveEmbed(ctx: WaifuEmbedContext): EmbedBuilder {
       { name: "Expires in", value: formatExpiresIn(expiresAt.getTime() - Date.now()), inline: false },
     );
 
+  if (pingRoles && pingRoles.length > 0) {
+    embed.addFields({
+      name: "Ping",
+      value: pingRoles.map((id) => `<@&${id}>`).join(" "),
+      inline: false,
+    });
+  }
+
   if (choice.imageUrl) {
     embed.setImage(choice.imageUrl);
   } else {
-    embed.setDescription("🖼️ Image unavailable");
+    embed.setDescription("�️ Image unavailable");
   }
 
   return embed;
