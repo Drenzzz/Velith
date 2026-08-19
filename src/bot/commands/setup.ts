@@ -34,23 +34,10 @@ const setupCommandData = new SlashCommandBuilder()
   )
   .addRoleOption((opt) =>
     opt
-      .setName("alerts_roles")
-      .setDescription("Roles to ping when a new waifu appears (mentionable required). Leave empty to clear.")
+      .setName("alerts_role")
+      .setDescription("Role to ping when a new waifu appears (mentionable required).")
       .setRequired(false),
   );
-
-function extractRoleIds(input: unknown): string[] {
-  if (!Array.isArray(input)) return [];
-  const ids = new Set<string>();
-  for (const v of input) {
-    if (!v || typeof v !== "object") continue;
-    const id = (v as { id?: unknown }).id;
-    if (typeof id !== "string") continue;
-    if (id.length === 0 || id === "@everyone") continue;
-    ids.add(id);
-  }
-  return Array.from(ids);
-}
 
 export const setupCommand = {
   data: setupCommandData,
@@ -84,24 +71,16 @@ export const setupCommand = {
     }
 
     const cycleDurationHours = hoursParsed.data;
-    const alertsRolesOption = interaction.options.get("alerts_roles");
-    const roleInputIds = alertsRolesOption
-      ? extractRoleIds(alertsRolesOption.value)
-      : null;
-    const shouldUpdateRoles = roleInputIds !== null;
-    const newRoleIds = roleInputIds ?? [];
+    const role = interaction.options.getRole("alerts_role");
+    const shouldUpdateRole = role !== null;
+    const newRoleId = role ? role.id : null;
 
-    if (shouldUpdateRoles) {
-      for (const id of newRoleIds) {
-        const role = await interaction.guild.roles.fetch(id).catch(() => null);
-        if (!role || !role.mentionable) {
-          await interaction.reply({
-            content: `Role <@&${id}> is not mentionable in this server. Enable "Allow anyone to @mention this role" before adding it.`,
-            flags: MessageFlags.Ephemeral,
-          });
-          return;
-        }
-      }
+    if (shouldUpdateRole && role && !role.mentionable) {
+      await interaction.reply({
+        content: `Role <@&${role.id}> is not mentionable in this server. Enable "Allow anyone to @mention this role" before adding it.`,
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
     }
 
     try {
@@ -119,7 +98,7 @@ export const setupCommand = {
           discordGuildId: interaction.guildId,
           waifuChannelId: channel.id,
           cycleDurationHours,
-          notificationRoleIds: newRoleIds,
+          notificationRoleIds: newRoleId ? [newRoleId] : [],
         });
       } else {
         const updateSet: Partial<typeof guilds.$inferInsert> = {
@@ -127,8 +106,8 @@ export const setupCommand = {
           cycleDurationHours,
           updatedAt: new Date(),
         };
-        if (shouldUpdateRoles) {
-          updateSet.notificationRoleIds = newRoleIds;
+        if (shouldUpdateRole) {
+          updateSet.notificationRoleIds = newRoleId ? [newRoleId] : [];
         }
         await db
           .update(guilds)
@@ -136,14 +115,16 @@ export const setupCommand = {
           .where(eq(guilds.id, existing[0]!.id));
       }
 
-      const finalRoleIds = shouldUpdateRoles
-        ? newRoleIds
+      const finalRoleIds = shouldUpdateRole
+        ? newRoleId
+          ? [newRoleId]
+          : []
         : existing[0]?.notificationRoleIds ?? [];
 
       const summary =
         finalRoleIds.length === 0
-          ? "Cleared (no alerts roles)."
-          : `Alerts roles: ${finalRoleIds.map((id) => `<@&${id}>`).join(" ")}`;
+          ? "Cleared (no alerts role)."
+          : `Alerts role: ${finalRoleIds.map((id) => `<@&${id}>`).join(" ")}`;
 
       await interaction.reply({
         content:
