@@ -2,6 +2,7 @@ import {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
+  MessageFlags,
   AllowedMentionsTypes,
   type APIAllowedMentions,
   type Client,
@@ -31,10 +32,18 @@ function sanitizeRoleIds(ids: readonly string[] | undefined): string[] {
   return Array.from(seen);
 }
 
-function buildAllowedMentions(roleIds: string[]): APIAllowedMentions {
+function buildSendExtras(roleIds: string[]): {
+  flags?: number;
+  allowedMentions?: APIAllowedMentions;
+} {
+  if (roleIds.length === 0) {
+    return { flags: MessageFlags.SuppressNotifications };
+  }
   return {
-    parse: [AllowedMentionsTypes.Role],
-    roles: roleIds,
+    allowedMentions: {
+      parse: [AllowedMentionsTypes.Role],
+      roles: roleIds,
+    },
   };
 }
 
@@ -77,17 +86,17 @@ export async function postWaifuEmbed(
   });
   const button = new ButtonBuilder()
     .setCustomId(CLAIM_BUTTON_ID)
-    .setLabel("💖 CLAIM")
+    .setLabel("� CLAIM")
     .setStyle(ButtonStyle.Primary);
 
   const row = new ActionRowBuilder<ButtonBuilder>().addComponents(button);
-  const allowedMentions: APIAllowedMentions = buildAllowedMentions(roleIds);
+  const sendExtras = buildSendExtras(roleIds);
 
   try {
     const message = await sendable.send({
       embeds: [embed],
       components: [row],
-      allowedMentions,
+      ...sendExtras,
     });
     return { messageId: message.id, channelId };
   } catch (err) {
