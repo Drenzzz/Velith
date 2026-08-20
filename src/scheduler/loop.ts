@@ -2,7 +2,7 @@ import type { Client } from "discord.js";
 import { logger } from "../logger/index.ts";
 import { tickOnceAll } from "./tick.ts";
 
-const DEFAULT_INTERVAL_MS = 60_000;
+const DEFAULT_INTERVAL_MS = 5 * 60_000;
 
 export interface SchedulerHandle {
   stop(): void;
