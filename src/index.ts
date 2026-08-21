@@ -12,7 +12,7 @@ logger.info(
 );
 
 const client = await startBot();
-const scheduler: SchedulerHandle = startScheduler(60_000, client);
+const scheduler: SchedulerHandle = startScheduler();
 
 let shuttingDown = false;
 
