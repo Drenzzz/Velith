@@ -15,14 +15,14 @@ const cycleHoursSchema = z.number().int().min(1).max(168);
 
 const setupCommandData = new SlashCommandBuilder()
   .setName("setup")
-  .setDescription("Configure the daily waifu channel and cycle duration")
+  .setDescription("Configure waifu channel/cycle/alerts, or reset config")
   .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
   .addChannelOption((opt) =>
     opt
       .setName("channel")
-      .setDescription("Channel to post daily waifu embeds")
+      .setDescription("Channel to post daily waifu embeds (omit if using reset)")
       .addChannelTypes(ChannelType.GuildText)
-      .setRequired(true),
+      .setRequired(false),
   )
   .addIntegerOption((opt) =>
     opt
@@ -36,6 +36,12 @@ const setupCommandData = new SlashCommandBuilder()
     opt
       .setName("alerts_role")
       .setDescription("Role to ping when a new waifu appears (mentionable required).")
+      .setRequired(false),
+  )
+  .addBooleanOption((opt) =>
+    opt
+      .setName("reset")
+      .setDescription("Clear channel and alerts role. Cycle preserved.")
       .setRequired(false),
   );
 
@@ -58,7 +64,8 @@ export const setupCommand = {
       return;
     }
 
-    const channel = interaction.options.getChannel("channel", true);
+    const channel = interaction.options.getChannel("channel");
+    const reset = interaction.options.getBoolean("reset") ?? false;
     const rawHours = interaction.options.getInteger("cycle_duration_hours");
     const hoursParsed = cycleHoursSchema.safeParse(rawHours ?? 24);
 
@@ -74,6 +81,45 @@ export const setupCommand = {
     const role = interaction.options.getRole("alerts_role");
     const shouldUpdateRole = role !== null;
     const newRoleId = role ? role.id : null;
+
+    if (!channel && !reset) {
+      await interaction.reply({
+        content: "Provide a channel or pass `reset:true`.",
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    if (reset) {
+      try {
+        await db
+          .update(guilds)
+          .set({
+            waifuChannelId: null,
+            notificationRoleIds: [],
+            updatedAt: new Date(),
+          })
+          .where(eq(guilds.discordGuildId, interaction.guildId));
+
+        await interaction.reply({
+          content:
+            "Config cleared. Scheduler will skip this server until you run `/setup channel:#foo` again.",
+          flags: MessageFlags.Ephemeral,
+        });
+
+        logger.info(
+          { guildId: interaction.guildId, userId: interaction.user.id },
+          "Setup reset applied",
+        );
+      } catch (err) {
+        logger.error({ err, guildId: interaction.guildId }, "Setup reset failed");
+        await interaction.reply({
+          content: "Setup reset failed due to an internal error.",
+          flags: MessageFlags.Ephemeral,
+        });
+      }
+      return;
+    }
 
     if (shouldUpdateRole && role && !role.mentionable) {
       await interaction.reply({

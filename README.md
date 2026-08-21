@@ -38,7 +38,7 @@ Run `/setup` in your Discord server to register the waifu channel and cycle dura
 Optional alert roles let specific roles (and their members) get notified when a new waifu spawns.
 
 ```bash
-/setup channel:#waifu cycle_duration_hours:12 alerts_roles:@Waifu Alerts @Daily
+/setup channel:#waifu cycle_duration_hours:12 alerts_role:@Waifu Alerts
 ```
 
 The chosen roles must be **mentionable** in your server. Leave `alerts_roles` empty to clear the list. Existing data such as the active waifu is preserved across runs.
@@ -181,6 +181,18 @@ Backup files are stored in `./backups/` with timestamp filenames. Restore:
 
 ```bash
 pg_restore --host=<host> --username=<user> --dbname=<db> --clean backups/discord_waifu_2026-08-17_03-00.sql.gz
+
+## Deployment Gotchas
+
+- **Railway Restart Policy `On Failure` (Free/Hobby plan):** after pushing
+  to `main`, Railway builds a new image but does **not** auto-restart the
+  running container. You must click "Redeploy" manually in the dashboard,
+  otherwise the old container keeps running old code.
+- **Build cache:** if you see unexpected behavior after redeploy, check the
+  startup log for `buildSha` — e.g. `"Scheduler started", "buildSha": "3e39ddb"`.
+  If it doesn't match `git rev-parse --short HEAD`, your container is stale.
+- **`/setup` command updates** require `bun run deploy:commands` after the
+  code change to propagate to Discord. Discord caches command definitions.
 ```
 
 ## Environment Variables

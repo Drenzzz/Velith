@@ -4,6 +4,10 @@ import { tickOnceAll } from "./tick.ts";
 
 const DEFAULT_INTERVAL_MS = 5 * 60_000;
 
+function getBuildSha(): string {
+  return (process.env.RAILWAY_GIT_COMMIT_SHA ?? "local").slice(0, 7);
+}
+
 export interface SchedulerHandle {
   stop(): void;
 }
@@ -12,7 +16,10 @@ export function startScheduler(
   intervalMs = DEFAULT_INTERVAL_MS,
   client: Client | null = null,
 ): SchedulerHandle {
-  logger.info({ intervalMs, hasClient: client !== null }, "Scheduler started");
+  logger.info(
+    { intervalMs, buildSha: getBuildSha(), hasClient: client !== null },
+    "Scheduler started",
+  );
 
   let running = false;
 
