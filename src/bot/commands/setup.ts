@@ -82,14 +82,6 @@ export const setupCommand = {
     const shouldUpdateRole = role !== null;
     const newRoleId = role ? role.id : null;
 
-    if (!channel && !reset) {
-      await interaction.reply({
-        content: "Provide a channel or pass `reset:true`.",
-        flags: MessageFlags.Ephemeral,
-      });
-      return;
-    }
-
     if (reset) {
       try {
         await db
@@ -118,6 +110,14 @@ export const setupCommand = {
           flags: MessageFlags.Ephemeral,
         });
       }
+      return;
+    }
+
+    if (!channel) {
+      await interaction.reply({
+        content: "Provide a channel or pass `reset:true`.",
+        flags: MessageFlags.Ephemeral,
+      });
       return;
     }
 
