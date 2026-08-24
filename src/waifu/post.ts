@@ -3,7 +3,6 @@ import {
   ButtonBuilder,
   ButtonStyle,
   MessageFlags,
-  AllowedMentionsTypes,
   type APIAllowedMentions,
   type Client,
   type SendableChannels,
@@ -41,7 +40,6 @@ function buildSendExtras(roleIds: string[]): {
   }
   return {
     allowedMentions: {
-      parse: [AllowedMentionsTypes.Role],
       roles: roleIds,
     },
   };
